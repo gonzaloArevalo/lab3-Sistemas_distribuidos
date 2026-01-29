@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pais-x.local/schemas/payload_survey_victimization.json",
+  "title": "Payload survey.victimization",
+  "description": "Payload para encuestas de victimización",
+  "type": "object",
+  "properties": {
+    "survey_id": { "type": "string" },
+    "respondent_age": { "type": "integer", "minimum": 0, "maximum": 150 },
+    "victimization_type": {
+      "type": "string",
+      "enum": ["property_crime", "violent_crime", "cyber_crime", "other"]
+    },
+    "incident_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "reported": { "type": "boolean" }
+  },
+  "required": ["survey_id", "respondent_age", "victimization_type", "incident_date", "reported"],
+  "additionalProperties": true
+}

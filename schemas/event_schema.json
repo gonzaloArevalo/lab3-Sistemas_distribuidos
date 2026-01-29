@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pais-x.local/schemas/event.json",
+  "title": "Event",
+  "description": "Esquema base para eventos del sistema (País X)",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "description": "UUID v4 único para cada evento",
+      "type": "string",
+      "format": "uuid"
+    },
+    "timestamp": {
+      "description": "ISO-8601 con timezone (UTC)",
+      "type": "string",
+      "format": "date-time"
+    },
+    "region": {
+      "description": "Región del evento",
+      "type": "string",
+      "enum": ["norte", "sur", "centro", "este", "oeste"]
+    },
+    "source": {
+      "description": "Tipo de evento; debe coincidir con el tópico",
+      "type": "string",
+      "enum": ["security.incident", "survey.victimization", "migration.case"]
+    },
+    "schema_version": {
+      "description": "Versión del esquema",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+"
+    },
+    "correlation_id": {
+      "description": "ID para correlacionar eventos (opcional)",
+      "type": "string"
+    },
+    "payload": {
+      "description": "Datos específicos del tipo de evento",
+      "type": "object"
+    }
+  },
+  "required": ["event_id", "timestamp", "region", "source", "schema_version", "payload"],
+  "additionalProperties": true
+}

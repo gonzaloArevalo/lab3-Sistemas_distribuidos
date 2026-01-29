@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pais-x.local/schemas/payload_migration_case.json",
+  "title": "Payload migration.case",
+  "description": "Payload para casos de migración",
+  "type": "object",
+  "properties": {
+    "case_id": { "type": "string" },
+    "case_type": {
+      "type": "string",
+      "enum": ["asylum", "refugee", "work_visa", "family_reunion", "other"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected", "in_review"]
+    },
+    "origin_country": { "type": "string" },
+    "application_date": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": ["case_id", "case_type", "status", "origin_country", "application_date"],
+  "additionalProperties": true
+}

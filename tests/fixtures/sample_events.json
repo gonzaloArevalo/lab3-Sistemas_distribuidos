@@ -1,0 +1,212 @@
+{
+  "valid_events": {
+    "security_incident": {
+      "event_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2025-01-15T10:30:00Z",
+      "region": "norte",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "correlation_id": "corr-12345",
+      "payload": {
+        "crime_type": "theft",
+        "severity": "medium",
+        "location": {
+          "latitude": -33.4489,
+          "longitude": -70.6693
+        },
+        "reported_by": "citizen"
+      }
+    },
+    "survey_victimization": {
+      "event_id": "660e8400-e29b-41d4-a716-446655440001",
+      "timestamp": "2025-01-15T11:00:00Z",
+      "region": "sur",
+      "source": "survey.victimization",
+      "schema_version": "1.0",
+      "correlation_id": "corr-12346",
+      "payload": {
+        "survey_id": "survey-2025-001",
+        "respondent_age": 35,
+        "victimization_type": "property_crime",
+        "incident_date": "2025-01-10",
+        "reported": true
+      }
+    },
+    "migration_case": {
+      "event_id": "770e8400-e29b-41d4-a716-446655440002",
+      "timestamp": "2025-01-15T11:30:00Z",
+      "region": "centro",
+      "source": "migration.case",
+      "schema_version": "1.0",
+      "correlation_id": "corr-12347",
+      "payload": {
+        "case_id": "mig-2025-001",
+        "case_type": "asylum",
+        "status": "pending",
+        "origin_country": "country-x",
+        "application_date": "2025-01-01"
+      }
+    }
+  },
+  "invalid_events": {
+    "missing_event_id": {
+      "timestamp": "2025-01-15T10:30:00Z",
+      "region": "norte",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "payload": {
+        "crime_type": "theft",
+        "severity": "medium",
+        "location": {
+          "latitude": -33.4489,
+          "longitude": -70.6693
+        },
+        "reported_by": "citizen"
+      }
+    },
+    "invalid_uuid": {
+      "event_id": "invalid-uuid",
+      "timestamp": "2025-01-15T10:30:00Z",
+      "region": "norte",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "payload": {
+        "crime_type": "theft",
+        "severity": "medium",
+        "location": {
+          "latitude": -33.4489,
+          "longitude": -70.6693
+        },
+        "reported_by": "citizen"
+      }
+    },
+    "invalid_timestamp": {
+      "event_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "invalid-date",
+      "region": "norte",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "payload": {
+        "crime_type": "theft",
+        "severity": "medium",
+        "location": {
+          "latitude": -33.4489,
+          "longitude": -70.6693
+        },
+        "reported_by": "citizen"
+      }
+    },
+    "invalid_region": {
+      "event_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2025-01-15T10:30:00Z",
+      "region": "invalid-region",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "payload": {
+        "crime_type": "theft",
+        "severity": "medium",
+        "location": {
+          "latitude": -33.4489,
+          "longitude": -70.6693
+        },
+        "reported_by": "citizen"
+      }
+    },
+    "missing_payload_fields": {
+      "event_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2025-01-15T10:30:00Z",
+      "region": "norte",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "payload": {
+        "crime_type": "theft"
+      }
+    }
+  },
+  "duplicate_events": {
+    "duplicate_1": {
+      "event_id": "880e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2025-01-15T12:00:00Z",
+      "region": "este",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "correlation_id": "corr-dup-01",
+      "payload": {
+        "crime_type": "assault",
+        "severity": "high",
+        "location": {
+          "latitude": -33.4500,
+          "longitude": -70.6700
+        },
+        "reported_by": "police"
+      }
+    },
+    "duplicate_2": {
+      "event_id": "880e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2025-01-15T12:01:00Z",
+      "region": "oeste",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "correlation_id": "corr-dup-02",
+      "payload": {
+        "crime_type": "burglary",
+        "severity": "medium",
+        "location": {
+          "latitude": -33.4510,
+          "longitude": -70.6710
+        },
+        "reported_by": "citizen"
+      }
+    }
+  },
+  "out_of_order_events": [
+    {
+      "event_id": "990e8400-e29b-41d4-a716-446655440001",
+      "timestamp": "2025-01-15T14:00:00Z",
+      "region": "norte",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "payload": {
+        "crime_type": "theft",
+        "severity": "low",
+        "location": {
+          "latitude": -33.4489,
+          "longitude": -70.6693
+        },
+        "reported_by": "citizen"
+      }
+    },
+    {
+      "event_id": "990e8400-e29b-41d4-a716-446655440002",
+      "timestamp": "2025-01-15T13:00:00Z",
+      "region": "norte",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "payload": {
+        "crime_type": "assault",
+        "severity": "medium",
+        "location": {
+          "latitude": -33.4490,
+          "longitude": -70.6694
+        },
+        "reported_by": "police"
+      }
+    },
+    {
+      "event_id": "990e8400-e29b-41d4-a716-446655440003",
+      "timestamp": "2025-01-15T12:00:00Z",
+      "region": "norte",
+      "source": "security.incident",
+      "schema_version": "1.0",
+      "payload": {
+        "crime_type": "vandalism",
+        "severity": "low",
+        "location": {
+          "latitude": -33.4491,
+          "longitude": -70.6695
+        },
+        "reported_by": "security_system"
+      }
+    }
+  ]
+}

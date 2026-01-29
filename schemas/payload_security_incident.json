@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pais-x.local/schemas/payload_security_incident.json",
+  "title": "Payload security.incident",
+  "description": "Payload para eventos de delitos reportados",
+  "type": "object",
+  "properties": {
+    "crime_type": {
+      "type": "string",
+      "enum": ["theft", "assault", "burglary", "vandalism", "fraud", "other"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "location": {
+      "type": "object",
+      "properties": {
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" }
+      },
+      "required": ["latitude", "longitude"]
+    },
+    "reported_by": {
+      "type": "string",
+      "enum": ["citizen", "police", "security_system", "other"]
+    }
+  },
+  "required": ["crime_type", "severity", "location", "reported_by"],
+  "additionalProperties": true
+}
