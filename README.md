@@ -14,24 +14,24 @@ Sistema event-driven con RabbitMQ para procesamiento de eventos de seguridad, vi
 ## Requisitos del Lab Implementados
 
 ### Requisitos Funcionales (RF)
-- **RF1**: Delivery at-least-once end-to-end ✅
-- **RF2**: Idempotencia y deduplicación por event_id ✅
-- **RF3**: Backpressure y retries (básico) ⚠️
-- **RF4**: Tolerancia a fallas con recuperación automática ✅
-- **RF5**: Replay de eventos (script implementado) ⚠️
-- **RF6**: Observabilidad con logs estructurados JSON ✅
-- **RF7**: Reproducibilidad con seed en publisher ✅
-- **RF8**: Runtime ≤ 8 minutos ✅
-- **RF9**: Datos sintéticos, neutros ✅
+- **RF1**: Delivery at-least-once end-to-end
+- **RF2**: Idempotencia y deduplicación por event_id
+- **RF3**: Backpressure y retries (básico)
+- **RF4**: Tolerancia a fallas con recuperación automática
+- **RF5**: Replay de eventos (script implementado)
+- **RF6**: Observabilidad con logs estructurados JSON
+- **RF7**: Reproducibilidad con seed en publisher
+- **RF8**: Runtime ≤ 8 minutos
+- **RF9**: Datos sintéticos, neutros
 
 ### Requisitos Técnicos (RT)
-- **RT1**: 6 contenedores Docker separados ✅
-- **RT2**: Docker Compose orquestación ✅
-- **RT3**: CI/CD configurado (GitHub Actions) ✅
-- **RT4**: Documentación completa ✅
-- **RT5**: Schemas JSON para validación ✅
-- **RT6**: Scripts de demo ✅
-- **RT7**: Tests unitarios y de integración ✅
+- **RT1**: 6 contenedores Docker separados
+- **RT2**: Docker Compose orquestación
+- **RT3**: CI/CD configurado (GitHub Actions)
+- **RT4**: Documentación completa
+- **RT5**: Schemas JSON para validación
+- **RT6**: Scripts de demo
+- **RT7**: Tests unitarios y de integración
 
 ## Ejecución del Sistema
 
@@ -163,7 +163,7 @@ El proyecto incluye configuración de CI/CD con GitHub Actions en `.github/workf
 - **Pull Requests**: Validación básica
 - **Push a main**: Validación + build completo
 
-**Estado del CI:** ✅ Configurado y funcional
+**Estado del CI:** Configurado y funcional
 
 ### 6. Monitoreo y Observabilidad
 
@@ -291,13 +291,6 @@ docker compose build --no-cache
 - **Almacenamiento**: SQLite
 - **Consulta**: directa vía SQLite CLI
 - **Formato**: métricas en JSON
-
-## Limitaciones Conocidas
-
-1. **API REST**: Metrics solo almacena, no expone HTTP
-2. **Backpressure**: Implementación básica
-3. **Consumer Groups**: No se utiliza paralelismo real
-4. **Replay**: Script implementado pero funcionalidad limitada
 
 ## Métricas de Observabilidad
 

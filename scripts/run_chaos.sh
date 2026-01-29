@@ -73,15 +73,15 @@ while [ $(date +%s) -lt $end_time ]; do
             # Matar un consumidor aleatorio
             consumers=("service_validator" "service_aggregator" "service_audit")
             target=${consumers[$RANDOM % ${#consumers[@]}]}
-            echo "🔥 CAOS: Matando consumidor $target"
+            echo "CAOS: Matando consumidor $target"
             docker kill "$target" 2>/dev/null || echo "$target no estaba corriendo"
             sleep 5
-            echo "🔄 RECUPERACIÓN: Reiniciando $target"
+            echo "RECUPERACIÓN: Reiniciando $target"
             docker compose up -d "${target#service_}"
             ;;
         "restart-broker")
             # Reiniciar el broker
-            echo "🔥 CAOS: Reiniciando broker RabbitMQ"
+            echo "CAOS: Reiniciando broker RabbitMQ"
             docker compose restart rabbitmq
             echo "Esperando recuperación de RabbitMQ..."
             for i in {1..30}; do
@@ -99,14 +99,14 @@ while [ $(date +%s) -lt $end_time ]; do
                 0)
                     consumers=("service_validator" "service_aggregator" "service_audit")
                     target=${consumers[$RANDOM % ${#consumers[@]}]}
-                    echo "🔥 CAOS: Matando consumidor $target"
+                    echo "CAOS: Matando consumidor $target"
                     docker kill "$target" 2>/dev/null || echo "$target no estaba corriendo"
                     sleep 5
-                    echo "🔄 RECUPERACIÓN: Reiniciando $target"
+                    echo "RECUPERACIÓN: Reiniciando $target"
                     docker compose up -d "${target#service_}"
                     ;;
                 1)
-                    echo "🔥 CAOS: Reiniciando broker RabbitMQ"
+                    echo "CAOS: Reiniciando broker RabbitMQ"
                     docker compose restart rabbitmq
                     for i in {1..30}; do
                         if docker exec rabbitmq_broker rabbitmq-diagnostics -q ping 2>/dev/null; then
@@ -117,7 +117,7 @@ while [ $(date +%s) -lt $end_time ]; do
                     done
                     ;;
                 2)
-                    echo "🔥 CAOS: Inyectando carga adicional"
+                    echo "CAOS: Inyectando carga adicional"
                     docker compose run -d --name chaos_burst_publisher publisher --mode burst --seed "$SEED"
                     sleep 10
                     docker stop chaos_burst_publisher 2>/dev/null || true

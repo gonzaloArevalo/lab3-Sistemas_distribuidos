@@ -58,14 +58,14 @@ docker rm initial_publisher 2>/dev/null || true
 echo "Iniciando replay..."
 case $REPLAY_TYPE in
     "from-timestamp")
-        echo "🔄 REPLAY: Reproduciendo desde timestamp $REPLAY_PARAM"
+        echo "REPLAY: Reproduciendo desde timestamp $REPLAY_PARAM"
         # Para RabbitMQ, simulamos replay reiniciando consumidores
         docker compose stop validator aggregator audit
         sleep 5
         docker compose up -d validator aggregator audit
         ;;
     "from-offset")
-        echo "🔄 REPLAY: Reproduciendo desde offset $REPLAY_PARAM"
+        echo "REPLAY: Reproduciendo desde offset $REPLAY_PARAM"
         # Simular reset de colas
         docker compose stop validator aggregator audit
         docker exec rabbitmq_broker rabbitmqctl stop_app 2>/dev/null || true
@@ -75,7 +75,7 @@ case $REPLAY_TYPE in
         docker compose up -d validator aggregator audit
         ;;
     "replay-all")
-        echo "🔄 REPLAY: Reproduciendo todos los eventos"
+        echo "REPLAY: Reproduciendo todos los eventos"
         # Limpiar estado completamente
         docker compose stop validator aggregator audit
         docker exec rabbitmq_broker rabbitmqctl stop_app 2>/dev/null || true

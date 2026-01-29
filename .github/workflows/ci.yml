@@ -50,9 +50,9 @@ jobs:
         
         for file in "${required_files[@]}"; do
           if [ -f "$file" ]; then
-            echo "✅ $file exists"
+            echo "$file exists"
           else
-            echo "❌ $file missing"
+            echo "$file missing"
             exit 1
           fi
         done
@@ -85,9 +85,9 @@ jobs:
         
         for script in "${scripts[@]}"; do
           if [ -x "$script" ]; then
-            echo "✅ $script is executable"
+            echo "$script is executable"
           else
-            echo "⚠️ $script is not executable, making it executable..."
+            echo "$script is not executable, making it executable..."
             chmod +x "$script"
           fi
         done
@@ -105,11 +105,11 @@ jobs:
         
         for dockerfile in "${dockerfiles[@]}"; do
           if [ -f "$dockerfile" ]; then
-            echo "✅ $dockerfile exists"
+            echo "$dockerfile exists"
             # Basic syntax check
             docker build --dry-run -f "$dockerfile" . || echo "Syntax check passed for $dockerfile"
           else
-            echo "❌ $dockerfile missing"
+            echo "$dockerfile missing"
             exit 1
           fi
         done
@@ -122,15 +122,15 @@ jobs:
         for service in "${services[@]}"; do
           service_dir="servicios/$service"
           if [ -d "$service_dir" ]; then
-            echo "✅ $service_dir exists"
+            echo "$service_dir exists"
             if [ -f "$service_dir/Dockerfile" ] && [ -f "$service_dir/requirements.txt" ]; then
-              echo "✅ $service has Dockerfile and requirements.txt"
+              echo "$service has Dockerfile and requirements.txt"
             else
-              echo "❌ $service missing required files"
+              echo "$service missing required files"
               exit 1
             fi
           else
-            echo "❌ $service_dir missing"
+            echo "$service_dir missing"
             exit 1
           fi
         done
@@ -139,16 +139,16 @@ jobs:
       run: |
         echo "Validating README.md structure..."
         if grep -q "docker compose up" README.md; then
-          echo "✅ README contains execution instructions"
+          echo "README contains execution instructions"
         else
-          echo "❌ README missing execution instructions"
+          echo "README missing execution instructions"
           exit 1
         fi
         
         if grep -q "Requisitos del Lab" README.md; then
-          echo "✅ README contains lab requirements"
+          echo "README contains lab requirements"
         else
-          echo "❌ README missing lab requirements"
+          echo "README missing lab requirements"
           exit 1
         fi
 
@@ -209,7 +209,7 @@ jobs:
         # Wait for RabbitMQ to be healthy
         timeout 60 bash -c 'until docker compose exec -T rabbitmq rabbitmq-diagnostics -q ping; do sleep 2; done'
         
-        echo "✅ RabbitMQ started successfully"
+        echo "RabbitMQ started successfully"
         
         # Clean up
         docker compose down
