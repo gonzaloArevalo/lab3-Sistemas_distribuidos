@@ -1,86 +1,126 @@
 import json
 import time
-import os
 import pika
-import settings  # Usa la configuración local de audit
+import argparse
+import os
+from datetime import datetime
+import settings
 
-def replay_events():
-    # 1. Ubicación del log (definida en tus settings de Audit)
-    log_path = settings.LOG_FILE_PATH 
+def connect():
+    """Conexión usando las variables de settings.py"""
+    params = pika.ConnectionParameters(
+        host=settings.RABBIT_HOST,
+        port=settings.RABBIT_PORT
+    )
+    connection = pika.BlockingConnection(params)
+    channel = connection.channel()
+    return connection, channel
+
+def replay_events(start_line=0, start_time_iso=None, target_exchange=None):
+    # 1. Usamos la ruta definida en tu settings.py
+    log_path = settings.LOG_FILE_PATH
     
     if not os.path.exists(log_path):
-        print(f"[!] No se encontró el archivo de log en: {log_path}")
-        print("    (Asegúrate de que el sistema haya corrido y generado datos primero)")
+        print(f"[!] ERROR: No existe el archivo de log en: {log_path}")
+        print("    ¿Has generado tráfico primero? (run_load.sh / run_burst.sh)")
         return
 
-    print(f"[*] Conectando a RabbitMQ en host: {settings.RABBIT_HOST}...")
+    # Si no nos dicen a dónde enviar, usamos el mismo exchange que auditamos
+    # (Esto hará que el Aggregator vuelva a recibir los mensajes)
+    exchange_to_publish = target_exchange if target_exchange else settings.TARGET_EXCHANGE
+
+    connection, channel = connect()
     
+    print(f"[*] INICIANDO REPLAY")
+    print(f"    -> Fuente: {log_path}")
+    print(f"    -> Destino (Exchange): {exchange_to_publish}")
+    print(f"    -> Offset (Línea): >= {start_line}")
+    print(f"    -> Filtro Tiempo: >= {start_time_iso if start_time_iso else 'Todo el historial'}")
+    print("-" * 50)
+
+    replayed_count = 0
+    skipped_count = 0
+    
+    # Preparamos filtro de fecha
+    start_dt = None
+    if start_time_iso:
+        try:
+            start_dt = datetime.fromisoformat(start_time_iso)
+        except ValueError:
+            print("[!] Error: Formato de fecha inválido. Usa formato ISO (ej: 2026-01-30T10:00:00)")
+            return
+
     try:
-        # 2. Conexión a RabbitMQ
-        connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=settings.RABBIT_HOST, port=settings.RABBIT_PORT)
-        )
-        channel = connection.channel()
-
-        # Enviamos al 'events_exchange' (el inicio del pipeline) para probar que el Validator y Aggregator vuelvan a procesar todo.
-        TARGET_REPLAY_EXCHANGE = "events_exchange" 
-        
-        # Aseguramos que el exchange exista (por si acaso)
-        channel.exchange_declare(exchange=TARGET_REPLAY_EXCHANGE, exchange_type='topic', durable=True)
-
-        print(f"[*] Iniciando Replay desde {log_path} hacia '{TARGET_REPLAY_EXCHANGE}'...")
-        count = 0
-
         with open(log_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if not line: continue
-                
+            for index, line in enumerate(f):
+                # --- LÓGICA DE REPLAY (Cumple Requisitos) ---
+
+                # 1. Filtro por Offset (Posición/Línea)
+                if index < start_line:
+                    continue
+
                 try:
-                    # El log de audit guarda algo como: {"timestamp":..., "event": {...}} o directamente el evento. Intentamos detectar la estructura.
-                    record = json.loads(line)
+                    event = json.loads(line)
                     
-                    # Si el log tiene el evento anidado bajo una llave "event" u "original_event"
-                    if "event" in record and isinstance(record["event"], dict):
-                        payload = record["event"]
-                    elif "original_event" in record:
-                        payload = record["original_event"]
-                    else:
-                        # Asumimos que la línea entera es el evento
-                        payload = record
+                    # 2. Filtro por Tiempo (Point-in-time recovery)
+                    if start_dt:
+                        # Buscamos el timestamp dentro del evento o del log
+                        # Asumimos que tu log tiene un campo "timestamp" o el evento lo tiene
+                        ts_str = event.get('timestamp') or event.get('original_event', {}).get('timestamp')
+                        
+                        if ts_str:
+                            try:
+                                # A veces vienen con milisegundos, cortamos lo extra si falla
+                                event_dt = datetime.fromisoformat(ts_str)
+                                if event_dt < start_dt:
+                                    skipped_count += 1
+                                    continue
+                            except ValueError:
+                                pass # Si no podemos parsear la fecha, lo enviamos igual por seguridad
 
-                    # Extraemos el routing_key original o usamos uno por defecto
+                    # 3. Re-inyección (Publicar)
+                    # Usamos el routing_key original para que llegue a la cola correcta (norte/sur/etc)
+                    routing_key = event.get('routing_key', 'replay.unknown')
                     
-                    routing_key = payload.get('source', 'replay.generic')
+                    # Limpieza: Si el log tiene metadatos extra del audit, enviamos solo el evento original
+                    # Si tu log guarda el evento tal cual, enviamos 'event'.
+                    payload = event.get('original_event', event) 
 
-                    # 3. Publicar de nuevo
                     channel.basic_publish(
-                        exchange=TARGET_REPLAY_EXCHANGE,
+                        exchange=exchange_to_publish,
                         routing_key=routing_key,
                         body=json.dumps(payload),
                         properties=pika.BasicProperties(
-                            delivery_mode=2, # Persistente
-                            headers={'x-replay': 'true'} # Marca de agua para depuración
+                            delivery_mode=2, 
+                            headers={"x-replay": "true"} # Marcamos que es un replay (opcional pero pro)
                         )
                     )
                     
-                    count += 1
-                    if count % 10 == 0:
-                        print(f" -> Reinyectados {count} eventos...")
-                    
-                    # Pequeña pausa para no saturar
+                    replayed_count += 1
+                    # Pequeño sleep para efecto visual en la demo
                     time.sleep(0.05) 
+                    print(f" [Replay] Línea {index} -> Enviado a {routing_key}")
 
                 except json.JSONDecodeError:
-                    print(f"[!] Línea corrupta ignorada.")
-                except Exception as e:
-                    print(f"[!] Error procesando línea: {e}")
+                    print(f" [!] Línea {index} corrupta, ignorando.")
 
-        print(f"\n[OK] Replay finalizado exitosamente. Total reinyectados: {count}")
+    except KeyboardInterrupt:
+        print("\n[!] Replay detenido por el usuario.")
+    finally:
         connection.close()
-
-    except Exception as e:
-        print(f"[!] Error crítico de conexión o ejecución: {e}")
+        print("-" * 50)
+        print(f"RESUMEN: Reinyectados: {replayed_count} | Omitidos por fecha: {skipped_count}")
 
 if __name__ == "__main__":
-    replay_events()
+    parser = argparse.ArgumentParser(description='Herramienta de Replay de Eventos')
+    parser.add_argument('--offset', type=int, default=0, help='Saltar las primeras N líneas (Offset)')
+    parser.add_argument('--timestamp', type=str, default=None, help='Fecha ISO de inicio (YYYY-MM-DDTHH:MM:SS)')
+    parser.add_argument('--exchange', type=str, default=None, help='Exchange destino (Opcional)')
+    
+    args = parser.parse_args()
+    
+    replay_events(
+        start_line=args.offset, 
+        start_time_iso=args.timestamp,
+        target_exchange=args.exchange
+    )
