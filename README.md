@@ -83,8 +83,17 @@ docker compose up -d
 # Detener contenedor
 docker compose stop NOMBRE_CONTENEDOR
 
-# Para ver replay, primero se debe detener publisher
-docker compose exec audit python replay.py
-
 # Para lo que son los scripts, si se esta utilizando linux se debe utilizar el siguiente comando primero
 chmod +x run_load.sh run_burst.sh run_chaos.sh run_demo.sh replay.sh
+
+# Para ver replay, primero se debe detener publisher, y los demas contenedores deben de estar corriendo, aqui hay dos formas:
+docker compose exec audit python replay.py
+./replay.sh
+
+# Los demas scripts: run_load, run_burst, run_chaos, no requieren que el sistema este levantado, estos lo hacen por ti, si ya tenias un sistmea levantado simplemente reescriben la configuración y lo corren de nuevo
+run_load: para correr dentro de la carpeta raiz del proyecto utilizar el comando en terminal ./run_load.sh este es el inicio normal, este tiene un event rate de 1.0 que es velocidad baja, sirve para ver el dashboard funcionando tranquilo.
+
+run_burst: para correr, ir a la carpeta raiz del proyecto y utilizar el comando ./run_burst.sh , este script es para lo que es backpressure, si se tenia un run_load primero ejecutar Ctrl + C y despues el comando de inicio, establce el event rate a 50 con el modo burst activado. El sistema arranca, pero el Publisher inunda a RabbitMQ. Verás las colas llenándose porque el Validator no da abasto.
+
+run_chaos: para correr, ir a la carpeta raiz del proyecto y utilizar el comando ./run_chaos.sh , si se tenia algo corriendo detener con Ctrl + C. Levanta el sistema en modo "detached" (-d, o sea, en segundo plano), espera 10 segundos, mata al Validator (docker compose stop validator), espera a que se acumulen mensajes (simula caída), revive al Validator (docker compose start validator), reinicia RabbitMQ (docker compose restart rabbitmq). Esta hecho para que se muestre la resiliencia del sistema
+
