@@ -22,9 +22,7 @@ def replay_events():
         )
         channel = connection.channel()
 
-        # IMPORTANTE: Enviamos al 'events_exchange' (el inicio del pipeline)
-        # para probar que el Validator y Aggregator vuelvan a procesar todo.
-        # Hardcodeamos el nombre porque en audit/settings.py no tienes esta variable.
+        # Enviamos al 'events_exchange' (el inicio del pipeline) para probar que el Validator y Aggregator vuelvan a procesar todo.
         TARGET_REPLAY_EXCHANGE = "events_exchange" 
         
         # Aseguramos que el exchange exista (por si acaso)
@@ -39,8 +37,7 @@ def replay_events():
                 if not line: continue
                 
                 try:
-                    # El log de audit suele guardar algo como: {"timestamp":..., "event": {...}}
-                    # O directamente el evento. Intentamos detectar la estructura.
+                    # El log de audit guarda algo como: {"timestamp":..., "event": {...}} o directamente el evento. Intentamos detectar la estructura.
                     record = json.loads(line)
                     
                     # Si el log tiene el evento anidado bajo una llave "event" u "original_event"
@@ -53,7 +50,7 @@ def replay_events():
                         payload = record
 
                     # Extraemos el routing_key original o usamos uno por defecto
-                    # (Si tus eventos tienen campo 'source', úsalo)
+                    
                     routing_key = payload.get('source', 'replay.generic')
 
                     # 3. Publicar de nuevo
@@ -71,7 +68,7 @@ def replay_events():
                     if count % 10 == 0:
                         print(f" -> Reinyectados {count} eventos...")
                     
-                    # Pequeña pausa para no saturar (simula tiempo real acelerado)
+                    # Pequeña pausa para no saturar
                     time.sleep(0.05) 
 
                 except json.JSONDecodeError:

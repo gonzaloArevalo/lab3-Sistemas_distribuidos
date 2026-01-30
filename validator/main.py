@@ -6,6 +6,7 @@ import jsonschema
 from jsonschema import validate
 import settings
 import schemas
+import os
 
 # Configuración de Retries
 MAX_RETRIES = 3
@@ -65,54 +66,6 @@ def validate_event(event_data):
     except Exception as e:
         return False, f"Error inesperado: {str(e)}"
 
-# def callback(ch, method, properties, body):
-#     """Función que procesa cada mensaje"""
-#     print(f" [>] Recibido: {method.routing_key}")
-    
-#     try:
-#         event_data = json.loads(body)
-#         is_valid, error_msg = validate_event(event_data)
-
-#         if is_valid:
-#             # === CASO ÉXITO ===
-#             # Re-publicamos al exchange de procesamiento (OUTPUT)
-#             # Mantenemos el mismo routing_key para que el Aggregator sepa qué es
-#             ch.basic_publish(
-#                 exchange=settings.OUTPUT_EXCHANGE,
-#                 routing_key=method.routing_key, 
-#                 body=body,
-#                 properties=pika.BasicProperties(delivery_mode=2) # Persistente
-#             )
-#             print(f" [V] Válido. Reenviado a {settings.OUTPUT_EXCHANGE}")
-
-#         else:
-#             # === CASO ERROR (DLQ) ===
-#             # Envolvemos el mensaje original con metadata del error [cite: 222]
-#             dlq_message = {
-#                 "original_event": event_data,
-#                 "error": error_msg,
-#                 "failed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-#                 "service": "validator"
-#             }
-            
-#             ch.basic_publish(
-#                 exchange=settings.DLQ_EXCHANGE,
-#                 routing_key="deadletter.validation",
-#                 body=json.dumps(dlq_message),
-#                 properties=pika.BasicProperties(delivery_mode=2)
-#             )
-#             print(f" [X] Inválido ({error_msg}). Enviado a DLQ.")
-
-#     except json.JSONDecodeError:
-#         # Si ni siquiera es JSON, mandar a DLQ como texto plano
-#         print(" [!] Error: No es un JSON válido")
-#         # (Aquí podrías implementar lógica para mandar el raw body a DLQ)
-
-#     finally:
-#         # IMPORTANTE: Confirmar procesamiento (At-Least-Once) 
-#         ch.basic_ack(delivery_tag=method.delivery_tag)
-
-
 def callback(ch, method, properties, body):
     """Procesa mensajes con política de Retry (Exponential Backoff)"""
     print(f" [>] Recibido: {method.routing_key}")
@@ -121,11 +74,11 @@ def callback(ch, method, properties, body):
     
     while retry_count <= MAX_RETRIES:
         try:
-            # --- SIMULACIÓN DE CAOS (Para demostrar el Retry al profesor) ---
-            # Descomenta las siguientes 2 lineas para probar fallos transitorios:
-            #if random.random() < 0.3 and retry_count < 2: 
-            #    raise Exception("Simulando fallo transitorio de red/DB")
-            # ---------------------------------------------------------------
+            if os.getenv('SIMULATE_ERRORS') == 'true':
+                # Falla aleatoriamente (30% de veces) en los primeros intentos
+                if random.random() < 0.3 and retry_count < 2:
+                    print(f" [⚡] Simulación de Caos: Fallo de conexión inyectado.")
+                    raise Exception("Fallo de red simulado (Chaos Testing)")
 
             try:
                 event_data = json.loads(body)

@@ -5,7 +5,7 @@ import random
 import argparse
 import pika
 from datetime import datetime, timezone
-import settings  # <--- Importamos nuestra configuración
+import settings 
 
 # --- Generadores de Datos ---
 
@@ -17,7 +17,7 @@ def generate_base_event(source_type):
     return {
         "event_id": str(uuid.uuid4()),
         "timestamp": get_timestamp(),
-        "region": random.choice(settings.REGIONS), # Usa las regiones de settings
+        "region": random.choice(settings.REGIONS),
         "source": source_type,
         "schema_version": "1.0",
         "correlation_id": f"corr-{random.randint(1000, 9999)}",

@@ -7,7 +7,7 @@ import pika
 
 import settings
 
-# --- ESTADO EN MEMORIA ---
+# --- ESTADO EN MEMORIA --
 # En un sistema real distribuido, esto debería estar en Redis
 current_window_start = time.time()
 processed_ids = set()     # Para Deduplicación
@@ -83,7 +83,7 @@ def flush_window(channel):
     
     # Reiniciar estado
     stats_buffer = {}
-    processed_ids = set() # Nota: En prod, usaríamos un LRU Cache o Redis con TTL
+    processed_ids = set()
     event_ids_by_region = {}
     current_window_start = time.time()
 
@@ -121,8 +121,7 @@ def callback(ch, method, properties, body):
         processed_ids.add(event_id)
 
         # 3. VERIFICAR SI CERRAMOS VENTANA
-        # Nota: En sistemas simples, verificamos el tiempo en cada mensaje.
-        # Si no llegan mensajes, la ventana no se cierra (limitación aceptable para este lab).
+        # verificamos el tiempo en cada mensaje. Si no llegan mensajes, la ventana no se cierra.
         if time.time() - current_window_start >= settings.AGGREGATION_WINDOW:
             flush_window(ch)
 
