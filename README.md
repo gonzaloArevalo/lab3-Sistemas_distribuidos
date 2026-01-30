@@ -36,6 +36,37 @@ Este proyecto implementa un **pipeline de eventos** basado en microservicios que
 * **Responsabilidad**: ofrece una interfaz web y una API para visualizar las métricas agregadas.  Consume resúmenes de ventana (`analytics.window`) y actualiza un estado global en memoria con los recuentos más recientes.  Se expone un endpoint `GET /data` que devuelve un JSON con las métricas actuales y una página HTML que actualiza periódicamente para mostrar los recuentos por región y tipo..
 * **Configuración**: este servicio se conecta a RabbitMQ utilizando el exchange `analytics_exchange` y escucha la cola `dashboard_queue`; el puerto del servidor web se define en `dashboard/settings.py`.
 
+### Uso del Makefile
+
+Para simplificar la ejecución de las tareas comunes del laboratorio —como compilar las imágenes, arrancar el sistema en distintos modos, simular fallos o reprocesar eventos— el proyecto incluye un **Makefile** en la raíz.  Este archivo define reglas que envuelven los comandos de `docker compose` y los scripts, de manera que no tengas que recordar largas cadenas de comandos.
+
+Las reglas principales son:
+
+- **`make build`** – Compila o actualiza todas las imágenes de los servicios.  Úsalo cuando modifiques código o dependencias.
+- **`make load`** – Inicia el sistema en modo normal (≈1 evento/seg), limpiando cualquier entorno previo.  Equivale a lanzar `EVENT_RATE=1.0` y `ENABLE_BURST=false`.
+- **`make burst`** – Arranca el sistema en modo ráfaga para probar backpressure (≈50 eventos/seg) con `EVENT_RATE=50.0` y `ENABLE_BURST=true`.
+- **`make chaos`** – Ejecuta el script de tolerancia a fallos (`run_chaos.sh`), que simula la caída y recuperación del consumidor y del broker.
+- **`make replay`** – Reprocesa todos los eventos almacenados en la auditoría mediante `replay.sh`.  Necesita que el sistema esté corriendo.
+- **`make demo`** – Ejecuta la demostración completa de cuatro fases orquestada por `run_demo.sh`.
+- **`make logs`** – Muestra los logs en vivo de todos los servicios.
+- **`make clean`** – Detiene y elimina todos los contenedores y volúmenes (equivalente a `docker compose down -v`).
+
+> **Nota:** Para usar estas reglas necesitas tener instalado `make` (disponible por defecto en Linux y WSL; en Windows puede instalarse mediante MinGW o Git Bash).
+
+Ejemplo de uso desde WSL:
+
+```bash
+# Compilar y levantar el sistema en modo normal
+make load
+
+# Ejecutar la demo completa (carga, ráfaga, caos, verificación)
+make demo
+
+# Seguir los logs en tiempo real
+make logs
+
+
+
 ### Configuración y despliegue
 
 * **`docker-compose.yml`**: orquesta los seis contenedores (`rabbitmq`, `publisher`, `validator`, `aggregator`, `audit`, `dashboard`) con las variables de entorno adecuadas para cada servicio【124126403228911†L43-L74】.  RabbitMQ incluye el *management plugin* para acceder a su UI en el puerto 15672.  La base de datos y los logs del audit se montan en un volumen persistente.
@@ -124,4 +155,5 @@ run_load: para correr dentro de la carpeta raiz del proyecto utilizar el comando
 run_burst: para correr, ir a la carpeta raiz del proyecto y utilizar el comando ./run_burst.sh , este script es para lo que es backpressure, si se tenia un run_load primero ejecutar Ctrl + C y despues el comando de inicio, establce el event rate a 50 con el modo burst activado. El sistema arranca, pero el Publisher inunda a RabbitMQ. Verás las colas llenándose porque el Validator no da abasto.
 
 run_chaos: para correr, ir a la carpeta raiz del proyecto y utilizar el comando ./run_chaos.sh , si se tenia algo corriendo detener con Ctrl + C. Levanta el sistema en modo "detached" (-d, o sea, en segundo plano), espera 10 segundos, mata al Validator (docker compose stop validator), espera a que se acumulen mensajes (simula caída), revive al Validator (docker compose start validator), reinicia RabbitMQ (docker compose restart rabbitmq). Esta hecho para que se muestre la resiliencia del sistema
+
 
