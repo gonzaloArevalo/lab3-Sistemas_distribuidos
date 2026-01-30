@@ -41,6 +41,8 @@ services:
       - INPUT_EXCHANGE=events_exchange
       - OUTPUT_EXCHANGE=processing_exchange
       - DLQ_EXCHANGE=dlq_exchange
+      - MAX_RETRIES=${MAX_RETRIES:-5}
+      - BASE_BACKOFF=${BASE_BACKOFF:-1.0}
 
   # Paso 3
   aggregator:
