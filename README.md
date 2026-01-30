@@ -67,6 +67,33 @@ Este proyecto implementa un **pipeline de eventos** basado en microservicios que
 * **Persistencia y pruebas**: la base de datos SQLite se almacena en `data/audit.db` (ver `AUDIT_DB_PATH`).  Puede inspeccionarse con cualquier cliente SQLite para verificar la trazabilidad o realizar replays de eventos.
 * **Extensiones posibles**: implementar un modo de duplicados controlados y orden fuera de secuencia en el generador, añadir detección de anomalías que publique alertas en `alerts.anomaly`, o agregar endpoints de métricas Prometheus para observar throughput y latencia.
 
+## Ejecutar Tests
+
+El proyecto incluye **33 tests unitarios** que cubren toda la funcionalidad del sistema sin requerir dependencias externas como RabbitMQ.
+
+### Ejecutar todos los tests
+```bash
+# Desde el directorio raíz del proyecto
+./tests/run_tests.py
+```
+
+### Tests individuales
+```bash
+# Tests del publisher
+python3 -m pytest tests/test_publisher.py -v
+
+# Tests del validator  
+python3 -m pytest tests/test_validator.py -v
+
+# Tests del aggregator
+python3 -m pytest tests/test_aggregator.py -v
+```
+
+### Cobertura de tests
+- **Publisher (8 tests)**: Generación de eventos, formatos, UUIDs, timestamps
+- **Validator (13 tests)**: Validación de schemas, UUIDs, timestamps, regiones, payloads
+- **Aggregator (12 tests)**: Deduplicación, agregación, flush windows, callbacks
+
 ## Conclusión
 
 El código presenta una solución completa y extensible para procesar flujos de eventos con **garantías de al menos una vez**, deduplicación y trazabilidad end‑to‑end.  Utiliza RabbitMQ como bus de eventos, SQLite para persistencia ligera y Flask para la visualización en tiempo real.  La estructura modular facilita su despliegue mediante Docker y permite personalizar tasas de generación, ventanas de agregación y esquemas de validación conforme a las necesidades de cada caso.
