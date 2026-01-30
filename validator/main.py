@@ -9,8 +9,8 @@ import schemas
 import os
 
 # Configuración de Retries
-MAX_RETRIES = 3
-BASE_BACKOFF = 1.0 # Segundos
+MAX_RETRIES = settings.MAX_RETRIES
+BASE_BACKOFF = settings.BASE_BACKOFF
 
 def connect_rabbitmq():
     """Conexión robusta con reintentos"""

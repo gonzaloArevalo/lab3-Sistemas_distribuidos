@@ -13,3 +13,7 @@ INPUT_QUEUE = 'validator_input_queue'
 
 # Routing Keys (Topics) que vamos a escuchar
 LISTEN_TOPICS = ["security.incident", "survey.victimization", "migration.case"]
+
+
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", 5))
+BASE_BACKOFF = float(os.getenv("BASE_BACKOFF", 1.0))
