@@ -89,6 +89,7 @@ chmod +x run_load.sh run_burst.sh run_chaos.sh run_demo.sh replay.sh
 # Para ver replay, primero se debe detener publisher, y los demas contenedores deben de estar corriendo, aqui hay dos formas:
 docker compose exec audit python replay.py
 ./replay.sh
+Requiere que el sistema esta corriendo previamnete ya sea levantado manualmente, o con run_load o run_burst. Se mete dentro del contenedor audit que ya existe, ejecuta el script de python replay.py que está adentro, lee el archivo audit_log.jsonl y vuelve a enviar los eventos viejos.
 
 # Los demas scripts: run_load, run_burst, run_chaos, no requieren que el sistema este levantado, estos lo hacen por ti, si ya tenias un sistmea levantado simplemente reescriben la configuración y lo corren de nuevo
 run_load: para correr dentro de la carpeta raiz del proyecto utilizar el comando en terminal ./run_load.sh este es el inicio normal, este tiene un event rate de 1.0 que es velocidad baja, sirve para ver el dashboard funcionando tranquilo.
