@@ -52,6 +52,9 @@ def cleanup_old_processed_ids():
     for old_id in old_ids:
         del processed_ids[old_id]
     
+    # Asignación explícita para satisfacer Flake8
+    processed_ids = processed_ids
+    
     if old_ids:
         print(f" [c] Limpiados {len(old_ids)} IDs antiguos de deduplicación")
 

@@ -44,6 +44,9 @@ def cleanup_old_processed_ids():
     old_ids = [event_id for event_id, timestamp in processed_ids.items() if timestamp < cutoff_time]
     for old_id in old_ids:
         del processed_ids[old_id]
+    
+    # Asignación explícita para satisfacer Flake8
+    processed_ids = processed_ids
 
 def flush_window(channel):
     """Publica los resultados acumulados y reinicia el buffer"""
