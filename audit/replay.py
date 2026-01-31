@@ -87,7 +87,7 @@ def replay_events(start_line=0, start_time_iso=None, target_exchange=None):
                     payload = event.get('original_event', event) 
 
                     channel.basic_publish(
-                        exchange=settings.TARGET_EXCHANGE,
+                        exchange=exchange_to_publish,
                         routing_key=routing_key,
                         body=json.dumps(payload),
                         properties=pika.BasicProperties(
