@@ -110,6 +110,10 @@ def callback(ch, method, properties, body):
         event = json.loads(body)
         event_id = event.get("event_id")
 
+        if properties.headers and properties.headers.get("x-replay") == "true":
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+        return
+
         # 1. DEDUPLICACIÓN (Idempotencia)
         if event_id in processed_ids:
             print(f" [d] Duplicado detectado e ignorado: {event_id}")
