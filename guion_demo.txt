@@ -1,0 +1,138 @@
+# GUIÓN PARA DEMOSTRACIÓN COMPLETA DEL SISTEMA PUB/SUB
+# Requisitos Funcionales y Técnicos
+# Laboratorio 3: Sistemas Distribuidos y Paralelos
+# Duración estimada: 8 minutos
+
+# ==========================================
+# PREPARACIÓN (1 minuto)
+# ==========================================
+
+## Paso 1: Limpiar entorno anterior
+COMANDO: docker compose down -v
+DESCRIPCIÓN: "Limpiamos cualquier contenedor o volumen anterior para empezar desde cero"
+
+## Paso 2: Construir imágenes
+COMANDO: docker compose build
+DESCRIPCIÓN: "Construimos todas las imágenes Docker de los microservicios"
+
+## Paso 3: Iniciar todos los servicios
+COMANDO: docker compose up -d
+DESCRIPCIÓN: "Iniciamos todos los servicios simultáneamente con docker compose up -d"
+
+## Paso 4: Verificar estado
+COMANDO: docker compose ps
+DESCRIPCIÓN: "Verificamos que los 6 contenedores estén activos"
+
+## Paso 5: Esperar estabilización
+DESCRIPCIÓN: "Esperar unos segundos para que todos los servicios se estabilicen"
+
+# ==========================================
+# 1. INGESTIÓN (1.5 minutos)
+# ==========================================
+# Mostrar generador publicando eventos en modo normal
+
+## Paso 6: Verificar generación de eventos
+COMANDO: docker compose logs -f --tail=20 publisher
+DESCRIPCIÓN: "Observamos cómo el publisher genera eventos en modo normal (tasa constante configurable)"
+
+## Paso 7: Verificar eventos en RabbitMQ
+COMANDO: echo "Abrir http://localhost:15672 (guest/guest) -> Exchanges -> events_exchange para ver routing keys: security.incident, survey.victimization, migration.case"
+DESCRIPCIÓN: "Verificamos que el publisher está publicando en los 3 routing keys obligatorios"
+
+# ==========================================
+# 2. VALIDACIÓN (1 minuto)
+# ==========================================
+# Mostrar validator procesando eventos y enviando inválidos a deadletter
+
+## Paso 8: Verificar validación
+COMANDO: docker compose logs -f --tail=20 validator
+DESCRIPCIÓN: "Observamos cómo el validator consume eventos, valida esquema JSON y publica eventos válidos"
+
+## Paso 9: Verificar deadletter
+COMANDO: echo "Verificar exchange dlq_exchange y cola deadletter.validation en http://localhost:15672 -> Exchanges"
+DESCRIPCIÓN: "Verificamos que los eventos inválidos se envían a deadletter.validation"
+
+## Paso 10: Verificar eventos válidos
+COMANDO: echo "Verificar exchange processing_exchange en http://localhost:15672 -> Exchanges"
+DESCRIPCIÓN: "Verificamos que los eventos válidos se publican en processing_exchange"
+
+# ==========================================
+# 3. MÉTRICAS (1.5 minutos)
+# ==========================================
+# Mostrar agregador generando métricas diarias y consulta en API/Dashboard
+
+## Paso 11: Verificar deduplicación
+COMANDO: docker compose logs -f --tail=20 aggregator
+DESCRIPCIÓN: "Observamos cómo el aggregator consume eventos válidos y los deduplica por event_id"
+
+## Paso 12: Verificar agregación
+DESCRIPCIÓN: "Esperar un momento para ver la agregación por ventanas diarias por región"
+
+## Paso 13: Verificar métricas
+COMANDO: echo "Verificar exchange analytics_exchange con routing key metrics.daily en http://localhost:15672 -> Exchanges"
+DESCRIPCIÓN: "Verificamos que el aggregator publica métricas agregadas en metrics.daily"
+
+# ==========================================
+# 4. FALLA INDUCIDA (1.5 minutos)
+# ==========================================
+# Matar un consumidor y mostrar recuperación automática
+
+## Paso 14: Matar consumidor
+COMANDO: docker compose stop validator
+DESCRIPCIÓN: "Matamos el validator para simular caída de consumidor"
+
+## Paso 15: Verificar acumulación en RabbitMQ
+COMANDO: echo "Verificar http://localhost:15672 -> Queues -> validator_input_queue (debe mostrar mensajes acumulándose)"
+DESCRIPCIÓN: "Observamos cómo los mensajes se acumulan en la cola del validator mientras está detenido"
+
+## Paso 16: Revivir consumidor
+COMANDO: docker compose start validator
+DESCRIPCIÓN: "Revivimos el validator para demostrar recuperación automática"
+
+## Paso 17: Verificar recuperación y procesamiento
+COMANDO: docker compose logs -f --tail=10 validator
+DESCRIPCIÓN: "Observamos cómo el validator se recupera y procesa eventos acumulados - Verificar que la cola validator_input_queue ya no acumula mensajes en http://localhost:15672"
+
+# ==========================================
+# 5. RECUPERACIÓN (1 minuto)
+# ==========================================
+# Reiniciar broker y mostrar continuidad del procesamiento
+
+## Paso 18: Reiniciar broker
+COMANDO: docker compose stop rabbitmq
+DESCRIPCIÓN: "Matamos el broker (RabbitMQ) para simular caída crítica"
+
+## Paso 19: Esperar detección
+DESCRIPCIÓN: "Esperar un momento a que los servicios detecten la caída del broker"
+
+## Paso 20: Revivir broker
+COMANDO: docker compose start rabbitmq
+DESCRIPCIÓN: "Revivimos el broker para demostrar recuperación completa"
+
+## Paso 21: Verificar continuidad
+COMANDO: docker compose logs -f --tail=15
+DESCRIPCIÓN: "Verificamos que el sistema continúa procesando eventos después de recuperar el broker"
+
+# ==========================================
+# 6. REPLAY (1.5 minutos)
+# ==========================================
+# Demostrar re-procesamiento desde un punto específico
+
+## Paso 22: Reiniciar entorno limpio
+COMANDO: docker compose down -v && docker compose up -d
+DESCRIPCIÓN: "Reiniciamos todos los contenedores con volúmenes limpios para garantizar un estado inicial conocido"
+
+## Paso 23: Eliminar logs de auditoría anteriores
+COMANDO: sudo rm data/audit_log.jsonl
+DESCRIPCIÓN: "Eliminamos el archivo de logs de auditoría para empezar con un historial limpio"
+
+## Paso 24: Generar eventos iniciales
+DESCRIPCIÓN: "Esperar unos segundos para que el publisher genere eventos y se guarden en el log de auditoría"
+
+## Paso 25: Ejecutar replay interactivo
+COMANDO: ./replay.sh
+DESCRIPCIÓN: "Ejecutamos el script de replay interactivo - Seleccionar 's' para detener publisher, luego opción '2' para replay por offset"
+
+## Paso 26: Verificar replay en aggregator
+COMANDO: docker compose logs -f --tail=20 aggregator
+DESCRIPCIÓN: "Observamos cómo el aggregator recibe y procesa los eventos del replay (debe mostrar deduplicación y eventos reprocesados)"

@@ -11,7 +11,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Paso 1
+  # Publisher
   publisher:
     build: ./publisher
     container_name: publisher
@@ -22,14 +22,11 @@ services:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - EXCHANGE_NAME=events_exchange
-      # --- AQUI ESTA LA MAGIA ---
-      # Si ejecutas el script run_burst.sh, este tomará el valor 50.0
-      # Si ejecutas docker compose up normal, tomará el valor 1.0
       - EVENT_RATE=${EVENT_RATE:-1.0}
       - ENABLE_BURST=${ENABLE_BURST:-false}
       - REGIONS=norte,sur,centro,este,oeste
 
-  # Paso 2
+  # Validator
   validator:
     build: ./validator
     container_name: validator
@@ -44,7 +41,7 @@ services:
       - MAX_RETRIES=${MAX_RETRIES:-5}
       - BASE_BACKOFF=${BASE_BACKOFF:-1.0}
 
-  # Paso 3
+  # Aggregator
   aggregator:
     build: ./aggregator
     container_name: aggregator
@@ -55,10 +52,9 @@ services:
       - RABBITMQ_HOST=rabbitmq
       - INPUT_EXCHANGE=processing_exchange
       - OUTPUT_EXCHANGE=analytics_exchange
-      # También parametrizamos la ventana por si quieres cambiarla en el futuro
       - AGGREGATION_WINDOW=${AGGREGATION_WINDOW:-10.0}
 
-  # --- NUEVO SERVICIO: AUDIT (Paso 4) ---
+  # Audit
   audit:
     build: ./audit
     container_name: audit
@@ -73,7 +69,7 @@ services:
     volumes:
       - ./data:/data
   
-  # --- NUEVO SERVICIO: DASHBOARD (Paso 5) ---
+  # Dashboard
   dashboard:
     build: ./dashboard
     container_name: dashboard

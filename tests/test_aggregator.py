@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 # Estado global (simula el estado del aggregator real)
 stats_buffer = {}
-processed_ids = set()
+processed_ids = {}     # Para Deduplicación: {event_id: timestamp_procesado}
 event_ids_by_region = {}
 current_window_start = time.time()
 
@@ -32,11 +32,22 @@ def process_event(event):
 
     if event_id:
         event_ids_by_region.setdefault(region, set()).add(event_id)
-        processed_ids.add(event_id)  # Agregar a processed_ids
+        processed_ids[event_id] = time.time()  # Agregar timestamp
+
+def cleanup_old_processed_ids():
+    """Limpia IDs procesados antiguos para evitar fugas de memoria"""
+    global processed_ids
+    current_time = time.time()
+    # Eliminar IDs procesados hace más de 1 hora (3600 segundos)
+    cutoff_time = current_time - 3600
+    
+    old_ids = [event_id for event_id, timestamp in processed_ids.items() if timestamp < cutoff_time]
+    for old_id in old_ids:
+        del processed_ids[old_id]
 
 def flush_window(channel):
     """Publica los resultados acumulados y reinicia el buffer"""
-    global current_window_start, stats_buffer, processed_ids, event_ids_by_region
+    global current_window_start, stats_buffer, event_ids_by_region
 
     if not stats_buffer:
         # Si no hubo datos, solo actualizamos el tiempo
@@ -44,11 +55,12 @@ def flush_window(channel):
         return
 
     # Crear mensaje de resumen
+    total_events_in_window = sum(len(event_ids) for event_ids in event_ids_by_region.values())
     summary = {
         "type": "window_summary",
         "window_start_iso": datetime.fromtimestamp(current_window_start).isoformat(),
         "window_end_iso": datetime.now().isoformat(),
-        "total_processed": len(processed_ids),
+        "total_processed": total_events_in_window,
         "stats_by_region": stats_buffer
     }
 
@@ -79,11 +91,13 @@ def flush_window(channel):
                 properties=MagicMock(),
             )
 
-    print(f" [S] Ventana cerrada. Publicado resumen de {len(processed_ids)} eventos.")
+    print(f" [S] Ventana cerrada. Publicado resumen de {len(event_ids_by_region)} eventos únicos.")
     
-    # Reiniciar estado
+    # Limpiar IDs antiguos periódicamente
+    cleanup_old_processed_ids()
+    
+    # Reiniciar estado de ventana (mantenemos processed_ids)
     stats_buffer = {}
-    processed_ids = set()
     event_ids_by_region = {}
     current_window_start = time.time()
 
@@ -94,9 +108,17 @@ def callback(ch, method, properties, body):
         event_id = event.get("event_id")
 
         # DEDUPLICACIÓN (Idempotencia)
+        current_time = time.time()
+        
         if event_id in processed_ids:
-            ch.basic_ack(delivery_tag=method.delivery_tag)
-            return
+            # Verificar si el evento fue procesado recientemente (dentro de la ventana actual)
+            processed_time = processed_ids[event_id]
+            if current_time - processed_time < 5.0:  # Usar ventana de 5s como en settings
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+            else:
+                # Evento antiguo que se vuelve a procesar, actualizamos timestamp
+                pass
 
         # PROCESAMIENTO
         process_event(event)
@@ -114,7 +136,7 @@ class TestAggregatorLogic(unittest.TestCase):
         """Configuración inicial para cada test"""
         global stats_buffer, processed_ids, event_ids_by_region, current_window_start
         stats_buffer = {}
-        processed_ids = set()
+        processed_ids = {}
         event_ids_by_region = {}
         current_window_start = time.time()
 
@@ -244,7 +266,8 @@ class TestAggregatorLogic(unittest.TestCase):
         
         # Buffer debe estar vacío después del flush
         self.assertEqual(len(stats_buffer), 0)
-        self.assertEqual(len(processed_ids), 0)
+        # processed_ids no se limpia más en flush_window
+        self.assertGreater(len(processed_ids), 0)
         self.assertEqual(len(event_ids_by_region), 0)
         
         # Verificar llamadas de publicación

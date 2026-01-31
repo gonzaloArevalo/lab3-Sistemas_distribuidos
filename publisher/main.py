@@ -4,6 +4,7 @@ import time
 import random
 import argparse
 import pika
+import socket
 from datetime import datetime, timezone
 import settings 
 
@@ -74,7 +75,7 @@ def connect_rabbitmq():
             
             print(f"[*] Publisher conectado a {settings.RABBIT_HOST}")
             return connection, channel
-        except pika.exceptions.AMQPConnectionError:
+        except (pika.exceptions.AMQPConnectionError, pika.exceptions.ConnectionClosedByBroker, socket.gaierror, ConnectionError) as e:
             print(f"[!] RabbitMQ no está listo en {settings.RABBIT_HOST}. Reintentando en 5s...")
             time.sleep(5)
 
@@ -108,26 +109,44 @@ def main():
         delay = 1.0 / settings.EVENT_RATE
         
         while True:
-            # 1. Lógica Burst (Opcional)
-            if settings.ENABLE_BURST and random.random() < 0.1: # 10% de probabilidad de ráfaga
-                print("!!! INICIANDO RÁFAGA (BURST) !!!")
-                burst_size = random.randint(5, 15)
-                for _ in range(burst_size):
-                    event = create_security_incident() # En ráfaga solemos mandar incidentes
-                    publish_event(channel, event)
-            
-            # 2. Generación Normal
-            # Elegimos un tipo de evento al azar
-            generator = random.choices(
-                [create_security_incident, create_victimization_survey, create_migration_case],
-                weights=[0.5, 0.3, 0.2]
-            )[0]
-            
-            event = generator()
-            publish_event(channel, event)
-            
-            # Esperar para respetar el Rate Limit
-            time.sleep(delay)
+            try:
+                # 1. Lógica Burst (Opcional)
+                if settings.ENABLE_BURST and random.random() < 0.1: # 10% de probabilidad de ráfaga
+                    print("!!! INICIANDO RÁFAGA (BURST) !!!")
+                    burst_size = random.randint(5, 15)
+                    for _ in range(burst_size):
+                        event = create_security_incident() # En ráfaga solemos mandar incidentes
+                        publish_event(channel, event)
+                
+                # 2. Generación Normal
+                # Elegimos un tipo de evento al azar
+                generator = random.choices(
+                    [create_security_incident, create_victimization_survey, create_migration_case],
+                    weights=[0.5, 0.3, 0.2]
+                )[0]
+                
+                event = generator()
+                publish_event(channel, event)
+                
+                # Esperar para respetar el Rate Limit
+                time.sleep(delay)
+                
+            except (pika.exceptions.AMQPConnectionError, pika.exceptions.ConnectionClosedByBroker) as e:
+                print(f' [!] Conexión perdida durante publicación: {e}. Reconectando...')
+                try:
+                    connection.close()
+                except:
+                    pass
+                connection, channel = connect_rabbitmq()
+                continue
+            except (pika.exceptions.AMQPChannelError, pika.exceptions.ChannelClosedByBroker) as e:
+                print(f' [!] Error de canal durante publicación: {e}. Reconectando...')
+                try:
+                    connection.close()
+                except:
+                    pass
+                connection, channel = connect_rabbitmq()
+                continue
 
     except KeyboardInterrupt:
         print("Deteniendo Publisher...")

@@ -30,8 +30,13 @@ def connect_rabbitmq():
 
             # 2. Declarar Cola de Entrada del Validator
             channel.queue_declare(queue=settings.INPUT_QUEUE, durable=True)
+            
+            # 3. Declarar Cola Deadletter para eventos inválidos
+            channel.queue_declare(queue='deadletter.validation', durable=True)
+            channel.queue_bind(exchange=settings.DLQ_EXCHANGE, queue='deadletter.validation', routing_key='deadletter.validation')
+            print(f"[*] Cola deadletter.validation declarada")
 
-            # 3. Bindings: Escuchar los tópicos definidos
+            # 4. Bindings: Escuchar los tópicos definidos
             for topic in settings.LISTEN_TOPICS:
                 channel.queue_bind(exchange=settings.INPUT_EXCHANGE, queue=settings.INPUT_QUEUE, routing_key=topic)
 
@@ -152,19 +157,33 @@ def send_to_dlq(ch, method, body, error_msg, service_name):
     )
 
 def main():
-    connection, channel = connect_rabbitmq()
-    
-    # QoS: Procesar 1 a la vez para balancear carga si escalamos
-    channel.basic_qos(prefetch_count=1)
-    
-    channel.basic_consume(queue=settings.INPUT_QUEUE, on_message_callback=callback)
-    
-    print(' [*] Esperando eventos. Para salir presiona CTRL+C')
-    try:
-        channel.start_consuming()
-    except KeyboardInterrupt:
-        channel.stop_consuming()
-        connection.close()
+    while True:
+        try:
+            connection, channel = connect_rabbitmq()
+            
+            # QoS: Procesar 1 a la vez para balancear carga si escalamos
+            channel.basic_qos(prefetch_count=1)
+            
+            channel.basic_consume(queue=settings.INPUT_QUEUE, on_message_callback=callback)
+            
+            print(' [*] Esperando eventos. Para salir presiona CTRL+C')
+            try:
+                channel.start_consuming()
+            except KeyboardInterrupt:
+                print(' [!] Deteniendo validator...')
+                channel.stop_consuming()
+                connection.close()
+                break
+                
+        except (pika.exceptions.AMQPConnectionError, pika.exceptions.ConnectionClosedByBroker) as e:
+            print(f' [!] Conexión perdida: {e}. Reintentando en 5 segundos...')
+            time.sleep(5)
+        except (pika.exceptions.AMQPChannelError, pika.exceptions.ChannelClosedByBroker) as e:
+            print(f' [!] Error de canal: {e}. Reintentando en 5 segundos...')
+            time.sleep(5)
+        except Exception as e:
+            print(f' [!] Error inesperado: {e}. Reintentando en 5 segundos...')
+            time.sleep(5)
 
 if __name__ == "__main__":
     main()

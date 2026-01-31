@@ -180,6 +180,13 @@ def store_metric_and_trace(conn: sqlite3.Connection, metric_msg: dict) -> None:
 
 
 def handle_event(conn: sqlite3.Connection, ch, method, properties, body: bytes):
+    # Skip replayed events to prevent infinite loop
+    headers = getattr(properties, "headers", None) or {}
+    if headers.get("x-replay") == "true":
+        print(f" [R] Ignorando evento replayado con RK: {method.routing_key}")
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        return
+    
     append_to_log(body)
 
     try:
@@ -234,24 +241,50 @@ def main():
 
     conn = init_db(settings.AUDIT_DB_PATH)
 
-    connection, channel = connect_rabbitmq()
+    while True:
+        try:
+            connection, channel = connect_rabbitmq()
 
-    channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(
-        queue=settings.QUEUE_NAME,
-        on_message_callback=lambda ch, method, properties, body: handle_event(conn, ch, method, properties, body),
-    )
-    channel.basic_consume(
-        queue=settings.METRICS_QUEUE_NAME,
-        on_message_callback=lambda ch, method, properties, body: handle_metric(conn, ch, method, properties, body),
-    )
+            channel.basic_qos(prefetch_count=1)
+            channel.basic_consume(
+                queue=settings.QUEUE_NAME,
+                on_message_callback=lambda ch, method, properties, body: handle_event(conn, ch, method, properties, body),
+            )
+            channel.basic_consume(
+                queue=settings.METRICS_QUEUE_NAME,
+                on_message_callback=lambda ch, method, properties, body: handle_metric(conn, ch, method, properties, body),
+            )
 
-    print(" [*] Audit Service grabando eventos...")
-    try:
-        channel.start_consuming()
-    except KeyboardInterrupt:
-        channel.stop_consuming()
-        connection.close()
+            print(" [*] Audit Service grabando eventos...")
+            try:
+                channel.start_consuming()
+            except KeyboardInterrupt:
+                print(' [!] Deteniendo audit service...')
+                channel.stop_consuming()
+                connection.close()
+                break
+                
+        except (pika.exceptions.AMQPConnectionError, pika.exceptions.ConnectionClosedByBroker) as e:
+            print(f' [!] Conexión perdida: {e}. Reintentando en 5 segundos...')
+            try:
+                connection.close()
+            except:
+                pass
+            time.sleep(5)
+        except (pika.exceptions.AMQPChannelError, pika.exceptions.ChannelClosedByBroker) as e:
+            print(f' [!] Error de canal: {e}. Reintentando en 5 segundos...')
+            try:
+                connection.close()
+            except:
+                pass
+            time.sleep(5)
+        except Exception as e:
+            print(f' [!] Error inesperado: {e}. Reintentando en 5 segundos...')
+            try:
+                connection.close()
+            except:
+                pass
+            time.sleep(5)
 
 
 if __name__ == "__main__":
