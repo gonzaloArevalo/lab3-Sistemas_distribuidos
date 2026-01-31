@@ -3,9 +3,9 @@
 # Laboratorio 3: Sistemas Distribuidos y Paralelos
 # Duración estimada: 8 minutos
 
-# ==========================================
+# =========================================
 # PREPARACIÓN (1 minuto)
-# ==========================================
+# =========================================
 
 ## Paso 1: Limpiar entorno anterior
 COMANDO: docker compose down -v
